@@ -1,4 +1,5 @@
 const path = require("path");
+const moment = require("moment")
 const db = require("../database/models");
 const sequelize = db.sequelize;
 const { Op } = require("sequelize");
@@ -51,15 +52,75 @@ const moviesController = {
         .catch(error => console.log(error))
   },
   create: function (req, res) {
+    const {title, rating, awards, length, release_date, genre_id} = req.body;
     Movies.create({
-        
-    })
-    return res.send(req.body)
+        title : title.trim(),
+        rating,
+        awards,
+        length,
+        release_date,
+        genre_id
+    }).then(movie => {
+        console.log(movie)
+        return res.redirect("/movies")
+    }).catch(error => console.log(error))
+    
   },
-  edit: function (req, res) {},
-  update: function (req, res) {},
-  delete: function (req, res) {},
-  destroy: function (req, res) {},
+  edit: function (req, res) {
+    let Movie = Movies.findByPk(req.params.id, {
+      include : [
+        {
+          association : "genre" 
+        }
+      ]
+    });
+    let allGenres = Genres.findAll({
+        order : ["name"]
+    })
+    
+    Promise.all([Movie, allGenres])
+        .then(([Movie, allGenres]) => {
+            /* console.log(Movie);
+            console.log(allGenres);*/
+            return res.render("moviesEdit",{
+                Movie,
+                allGenres,
+                moment : moment
+            })
+        }).catch(error => console.log(error))
+
+  },
+  update: function (req, res) {
+    const {title, rating, awards, length, release_date, genre_id} = req.body;
+    Movies.update(
+      {
+        title : title.trim(),
+        rating,
+        awards,
+        length,
+        release_date,
+        genre_id
+      },
+      {
+        where : {
+          id : req.params.id
+        }
+      }
+    ).then(() => res.redirect("/movies/detail/" + req.params.id))
+    .catch(error => console.log(error))
+  },
+  delete: function (req, res) {
+    const Movie = req.query;
+    return res.render("moviesDelete", {Movie})
+  },
+  destroy: function (req, res) {
+    const {id} = req.params;
+    Movies.destroy({where: {id}})
+      .then(() => {
+        return res.redirect("/movies")
+      })
+      .catch(error => console.log(error))
+  }
 };
 
 module.exports = moviesController;
